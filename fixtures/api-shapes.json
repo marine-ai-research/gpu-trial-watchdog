@@ -1,0 +1,184 @@
+{
+  "fixture_kind": "Documentation-derived fictional responses; not captured from a live account",
+  "get_pod": {
+    "id": "pod_doc123",
+    "name": "gpu-trial-000000000001",
+    "image": "example.invalid/container@sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "args": "{\"entrypoint\": [\"/usr/bin/python3\", \"-I\", \"-B\", \"-c\"], \"cmd\": [\"import time; time.sleep(6600)\"]}",
+    "disk": 50,
+    "ports": [],
+    "env": {},
+    "registry": null,
+    "status": "RUNNING",
+    "actions": [
+      "stop",
+      "restart",
+      "terminate"
+    ],
+    "mounts": {},
+    "gpu": {
+      "id": "NVIDIA L40S",
+      "count": 1,
+      "vcpuCount": 16,
+      "memory": 64
+    },
+    "cloud": "SECURE",
+    "dataCenterId": "EU-TEST-1",
+    "cudaVersion": "12.8",
+    "ssh": {
+      "proxy": null,
+      "direct": null
+    },
+    "template": null,
+    "cost": 1.1,
+    "locked": false,
+    "globalNetworking": {
+      "enabled": false
+    },
+    "runtime": null,
+    "createdAt": "2026-01-01T00:00:00Z",
+    "startedAt": "2026-01-01T00:01:00Z",
+    "entrypoint": [
+      "/usr/bin/python3",
+      "-I",
+      "-B",
+      "-c"
+    ],
+    "cmd": [
+      "import time; time.sleep(6600)"
+    ]
+  },
+  "list_pods": {
+    "pods": [
+      {
+        "id": "pod_doc123",
+        "name": "gpu-trial-000000000001",
+        "image": "example.invalid/container@sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "args": "{\"entrypoint\": [\"/usr/bin/python3\", \"-I\", \"-B\", \"-c\"], \"cmd\": [\"import time; time.sleep(6600)\"]}",
+        "disk": 50,
+        "ports": [],
+        "env": {},
+        "registry": null,
+        "status": "RUNNING",
+        "actions": [
+          "stop",
+          "restart",
+          "terminate"
+        ],
+        "mounts": {},
+        "gpu": {
+          "id": "NVIDIA L40S",
+          "count": 1,
+          "vcpuCount": 16,
+          "memory": 64
+        },
+        "cloud": "SECURE",
+        "dataCenterId": "EU-TEST-1",
+        "cudaVersion": "12.8",
+        "ssh": {
+          "proxy": null,
+          "direct": null
+        },
+        "template": null,
+        "cost": 1.1,
+        "locked": false,
+        "globalNetworking": {
+          "enabled": false
+        },
+        "runtime": null,
+        "createdAt": "2026-01-01T00:00:00Z",
+        "startedAt": "2026-01-01T00:01:00Z",
+        "entrypoint": [
+          "/usr/bin/python3",
+          "-I",
+          "-B",
+          "-c"
+        ],
+        "cmd": [
+          "import time; time.sleep(6600)"
+        ]
+      }
+    ],
+    "pagination": {
+      "nextCursor": null,
+      "hasNextPage": false
+    }
+  },
+  "empty_collections": {
+    "pods": {
+      "pods": [],
+      "pagination": {
+        "nextCursor": null,
+        "hasNextPage": false
+      }
+    },
+    "queuedPods": {
+      "queuedPods": [],
+      "pagination": {
+        "nextCursor": null,
+        "hasNextPage": false
+      }
+    },
+    "networkVolumes": {
+      "networkVolumes": [],
+      "pagination": {
+        "nextCursor": null,
+        "hasNextPage": false
+      }
+    },
+    "globalVolumes": {
+      "globalVolumes": [],
+      "pagination": {
+        "nextCursor": null,
+        "hasNextPage": false
+      }
+    },
+    "endpoints": {
+      "endpoints": [],
+      "pagination": {
+        "nextCursor": null,
+        "hasNextPage": false
+      }
+    },
+    "clusters": {
+      "clusters": [],
+      "pagination": {
+        "nextCursor": null,
+        "hasNextPage": false
+      }
+    }
+  },
+  "exec_success": {
+    "stdout": "{}\n",
+    "stderr": "",
+    "exitCode": 0,
+    "timedOut": false,
+    "truncated": false,
+    "durationMs": 1
+  },
+  "exec_timeout": {
+    "stdout": "",
+    "stderr": "",
+    "exitCode": null,
+    "timedOut": true,
+    "truncated": false,
+    "durationMs": 25000
+  },
+  "delete_response": {
+    "http_status": 204,
+    "body": null
+  },
+  "absence_response": {
+    "http_status": 404,
+    "body": null
+  },
+  "sources": [
+    "https://docs.runpod.io/api-reference-v2/pods/get-a-pod",
+    "https://docs.runpod.io/api-reference-v2/pods/list-pods",
+    "https://docs.runpod.io/api-reference-v2/pods/run-a-command-in-a-pod",
+    "https://docs.runpod.io/api-reference-v2/network-volumes/list-network-volumes",
+    "https://docs.runpod.io/api-reference-v2/global-volumes/list-global-volumes",
+    "https://docs.runpod.io/api-reference-v2/serverless/list-serverless-endpoints",
+    "https://docs.runpod.io/api-reference-v2/clusters/list-clusters"
+  ]
+}
