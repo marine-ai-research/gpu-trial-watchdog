@@ -1,0 +1,43 @@
+name: GPU trial watchdog
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        type: choice
+        required: true
+        options: [inventory, watch]
+permissions:
+  contents: read
+concurrency:
+  group: gpu-trial-watchdog
+  cancel-in-progress: false
+jobs:
+  controller:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository == vars.CONTROLLER_REPOSITORY && github.sha == vars.REVIEWED_CONTROLLER_COMMIT
+    environment: watchdog-approval
+    runs-on: ubuntu-24.04
+    timeout-minutes: 130
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - name: Run approved fixed action
+        env:
+          TRIAL_RUNPOD_TOKEN: ${{ secrets.TRIAL_RUNPOD_TOKEN }}
+          POLICY_NAME: ${{ secrets.POLICY_NAME }}
+          POLICY_IMAGE: ${{ secrets.POLICY_IMAGE }}
+          POLICY_DATA_CENTER: ${{ secrets.POLICY_DATA_CENTER }}
+          POLICY_GPU_TYPE: ${{ secrets.POLICY_GPU_TYPE }}
+          POLICY_MAX_HOURLY_USD: ${{ secrets.POLICY_MAX_HOURLY_USD }}
+          POLICY_APPROVED: ${{ vars.POLICY_APPROVED }}
+          POLICY_BILLING_MODE: ${{ vars.POLICY_BILLING_MODE }}
+          POLICY_AUTO_PAY_DISABLED: ${{ vars.POLICY_AUTO_PAY_DISABLED }}
+          POLICY_RISK_ACCEPTED: ${{ vars.POLICY_RISK_ACCEPTED }}
+          POLICY_GPU_COUNT: ${{ vars.POLICY_GPU_COUNT }}
+          POLICY_STARTUP_SHA256: ${{ vars.POLICY_STARTUP_SHA256 }}
+          POLICY_CONTAINER_DISK_GB: ${{ vars.POLICY_CONTAINER_DISK_GB }}
+          CONTROLLER_REPOSITORY: ${{ vars.CONTROLLER_REPOSITORY }}
+          REVIEWED_CONTROLLER_COMMIT: ${{ vars.REVIEWED_CONTROLLER_COMMIT }}
+          CONTROLLER_ACTION: ${{ inputs.action }}
+        run: python3 -I -B controller.py "$CONTROLLER_ACTION"
