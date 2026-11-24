@@ -1,0 +1,58 @@
+test_absent_cursor_does_not_prove_empty_inventory (__main__.Tests) ... ok
+test_actual_isolated_entrypoint_without_credentials (__main__.Tests) ... ok
+test_all_required_approvals (__main__.Tests) ... ok
+test_backward_clock_cannot_prevent_exact_cleanup (__main__.Tests) ... ok
+test_bad_creation_metadata (__main__.Tests) ... ok
+test_bound_api_failure_attempts_exact_cleanup (__main__.Tests) ... ok
+test_changed_policy_stops (__main__.Tests) ... ok
+test_documentation_derived_response_fixtures (__main__.Tests) ... ok
+test_duplicate_json (__main__.Tests) ... ok
+test_empty_looking_mount_variants_abstain (__main__.Tests) ... ok
+test_exact_delete_and_absence (__main__.Tests) ... ok
+test_final_error_output_sanitized (__main__.Tests) ... ok
+test_full_empty_account_rehearsal (__main__.Tests) ... ok
+test_http_error_body_not_echoed (__main__.Tests) ... ok
+test_identity_and_expiry (__main__.Tests) ... ok
+test_individual_environment_policy (__main__.Tests) ... ok
+test_initial_mismatch_never_creates_receipt (__main__.Tests) ... ok
+test_interruption_after_binding_attempts_cleanup (__main__.Tests) ... ok
+test_invalid_id_cannot_bind (__main__.Tests) ... ok
+test_invalid_policy_fields (__main__.Tests) ... ok
+test_inventory_deadline (__main__.Tests) ... ok
+test_log_only_whitelisted_shapes (__main__.Tests) ... ok
+test_missing_environment_policy_stops (__main__.Tests) ... ok
+test_missing_or_changed_startup_never_authorises_delete (__main__.Tests) ... ok
+test_missing_pagination_stops (__main__.Tests) ... ok
+test_missing_runtime_or_known_initial_mappings_rejected (__main__.Tests) ... ok
+test_missing_security_metadata_is_not_authorised (__main__.Tests) ... ok
+test_network_exception_not_echoed (__main__.Tests) ... ok
+test_nonabsence_never_success (__main__.Tests) ... ok
+test_nonfinite_json (__main__.Tests) ... ok
+test_pagination_complete (__main__.Tests) ... ok
+test_policy_accepts_only_hash_locked (__main__.Tests) ... ok
+test_policy_drift_terminates_early (__main__.Tests) ... ok
+test_postauthorisation_startup_creation_and_mapping_drift_cleans_original_id (__main__.Tests) ... ok
+test_postpaid_rejected (__main__.Tests) ... ok
+test_receipt_cannot_extend_deadline (__main__.Tests) ... ok
+test_receipt_no_persistent_volume (__main__.Tests) ... ok
+test_redirect_never_forwards_authorization (__main__.Tests) ... ok
+test_repeated_cursor_stops (__main__.Tests) ... ok
+test_same_name_mismatch_never_deletes_in_watch (__main__.Tests) ... ok
+test_schema_mismatch_stops (__main__.Tests) ... ok
+test_startup_hash_is_exact_and_policy_locked (__main__.Tests) ... ok
+test_termination_bounded_failure (__main__.Tests) ... ok
+test_transport_forbids_creation_and_other_origins (__main__.Tests) ... ok
+test_unconfigured_lock_stops (__main__.Tests) ... ok
+test_unknown_policy_field_rejected (__main__.Tests) ... ok
+test_unrelated_resource_is_count_only_and_never_deleted (__main__.Tests) ... ok
+test_watch_deadline_and_reconciliation (__main__.Tests) ... ok
+test_workflow_context (__main__.Tests) ... ok
+test_workflow_static_guards (__main__.Tests) ... ok
+test_wrong_initial_account_never_deletes (__main__.Tests) ... ok
+test_wrong_name_cannot_bind (__main__.Tests) ... ok
+
+----------------------------------------------------------------------
+Ran 52 tests in 0.342s
+
+OK
+NETWORK_SOCKET_EVENTS=0

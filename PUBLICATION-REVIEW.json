@@ -1,0 +1,104 @@
+{
+  "actual_hosted_logs_reviewed": false,
+  "authenticated_api_calls": 0,
+  "files_reviewed": [
+    {
+      "bytes": 603,
+      "nested_archive": false,
+      "path": ".github/workflows/validate.yml",
+      "private_markers": false,
+      "sha256": "14e32c67cd19ad5e8fe62ca973102f08314d14844ba3e778b484725ca3f9405f"
+    },
+    {
+      "bytes": 1832,
+      "nested_archive": false,
+      "path": ".github/workflows/watchdog.yml",
+      "private_markers": false,
+      "sha256": "3e32b817c2325b58f929cd253b1beaa84a5724c797adc44ce9e2394556918264"
+    },
+    {
+      "bytes": 1920,
+      "nested_archive": false,
+      "path": "BINDING-REVIEW.md",
+      "private_markers": false,
+      "sha256": "1ff77f46a6c24613204c57b13bcede22ec407c3adb88a0ad3b08df5d8961276f"
+    },
+    {
+      "bytes": 3281,
+      "nested_archive": false,
+      "path": "OFFLINE-TEST-REPORT.txt",
+      "private_markers": false,
+      "sha256": "29d06aa7aac408bc44faa98e262901209f05f69eb7333e85084940dc0151f746"
+    },
+    {
+      "bytes": 3440,
+      "nested_archive": false,
+      "path": "PROVIDER-SCHEMA.md",
+      "private_markers": false,
+      "sha256": "8af6bf8275c754f45dae9576faf9acdbc5b923cdfc7994440401bbafc461d600"
+    },
+    {
+      "bytes": 11292,
+      "nested_archive": false,
+      "path": "README.md",
+      "private_markers": false,
+      "sha256": "dcca0ee9dc3268be447850e63a57218b34388f2b7427d8b60f38ce83729c1d0c"
+    },
+    {
+      "bytes": 9635,
+      "nested_archive": false,
+      "path": "controller.py",
+      "private_markers": false,
+      "sha256": "b0dc2924051baf9927058b7b87009ca5c6c9116689c5cbd9a1c8071f13cb2e23"
+    },
+    {
+      "bytes": 4484,
+      "nested_archive": false,
+      "path": "fixtures/api-shapes.json",
+      "private_markers": false,
+      "sha256": "bea1a658e260275d7ccc46e450d5eaac90e3d3b6a893e8559d3946e14c9329d7"
+    },
+    {
+      "bytes": 16,
+      "nested_archive": false,
+      "path": "policy-lock.json",
+      "private_markers": false,
+      "sha256": "af15290aaa506d9bd9bcaabc0485bd0fca4ece9580492ded029e323201230a11"
+    },
+    {
+      "bytes": 424,
+      "nested_archive": false,
+      "path": "policy.example.json",
+      "private_markers": false,
+      "sha256": "7c2f4f0c304f183bc221f690aa0f55c2a942bdfec75603de0afd6b92c6b95a4e"
+    },
+    {
+      "bytes": 1777,
+      "nested_archive": false,
+      "path": "reconcile_resources.py",
+      "private_markers": false,
+      "sha256": "fbd2c621bd2b2d505134cd8bff73ee5dfa118d505b81f972aafb8d7cadf3be0d"
+    },
+    {
+      "bytes": 3096,
+      "nested_archive": false,
+      "path": "terminate_trial.py",
+      "private_markers": false,
+      "sha256": "1db56135ac4111cd9d6e1e2802545dd5be5bb008c678f263d2d1ee289b709192"
+    },
+    {
+      "bytes": 21571,
+      "nested_archive": false,
+      "path": "test_watchdog.py",
+      "private_markers": false,
+      "sha256": "c8aff5353d2a9a537f5fa74265f4ed15e050c8d0e6f03fb6481e8cc4dfea7513"
+    }
+  ],
+  "initial_authorisation": "No receipt or DELETE before full configured policy and exact startup acceptance",
+  "live_api_responses_verified": false,
+  "official_documentation_fixtures": true,
+  "offline_tests": 52,
+  "private_workload_or_nested_archives": 0,
+  "status": "REVIEW_CANDIDATE_NOT_AUTHORISED",
+  "subsequent_cleanup": "Original authorised ID only; drift and failure cleanup retained"
+}

@@ -1,0 +1,14 @@
+{
+  "approved": false,
+  "billing_mode": "prepaid",
+  "auto_pay_disabled": false,
+  "risk_or_contract_approval": false,
+  "name": "gpu-trial-000000000000",
+  "image": "example.invalid/container@sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "gpu_type": "NVIDIA L40S",
+  "gpu_count": 1,
+  "container_disk_gb": 50,
+  "data_center_id": null,
+  "quoted_hourly_usd": null,
+  "startup_sha256": null
+}
