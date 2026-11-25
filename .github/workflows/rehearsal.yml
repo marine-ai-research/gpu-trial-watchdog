@@ -1,0 +1,28 @@
+name: Read-only account rehearsal
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: gpu-trial-watchdog
+  cancel-in-progress: false
+jobs:
+  rehearsal:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository == vars.CONTROLLER_REPOSITORY && github.sha == vars.REVIEWED_REHEARSAL_COMMIT
+    environment: watchdog-approval
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - name: Credential-free rehearsal tests
+        run: python3 -I -B test_rehearsal.py
+      - name: Observe empty account; GET only
+        env:
+          REHEARSAL_RUNPOD_TOKEN: ${{ secrets.REHEARSAL_RUNPOD_TOKEN }}
+          REHEARSAL_AUTHORIZATION: ${{ vars.REHEARSAL_AUTHORIZATION }}
+          CONTROLLER_REPOSITORY: ${{ vars.CONTROLLER_REPOSITORY }}
+          REVIEWED_REHEARSAL_COMMIT: ${{ vars.REVIEWED_REHEARSAL_COMMIT }}
+        run: python3 -I -B rehearsal.py
