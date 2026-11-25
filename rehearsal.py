@@ -131,7 +131,7 @@ def emit(event):
 
 
 def observe(token, transport=get_collection, mono=time.monotonic, sleep=time.sleep):
-    # 120s initial inventory + 600s observation + at most 30s final readback.
+    # Initial 120s, at least 600s observation, bounded sweeps; 750s overall budget.
     initial = mono()
     empty_inventory(token, initial + 120, transport, mono)
     emit('READY_EMPTY_ACCOUNT')
@@ -140,7 +140,9 @@ def observe(token, transport=get_collection, mono=time.monotonic, sleep=time.sle
         sleep(min(15, max(0, end - mono())))
         if mono() >= end:
             break
-        empty_inventory(token, min(end, mono() + 30), transport, mono)
+        # A sweep started before the observation boundary keeps its 30s budget.
+        # Crossing 600s is not an API failure; a fresh final sweep still follows.
+        empty_inventory(token, min(initial + 750, mono() + 30), transport, mono)
         emit('EMPTY_ACCOUNT_CHECK')
     # A terminal full six-category readback is mandatory, not a stale cached result.
     empty_inventory(token, min(initial + 750, mono() + 30), transport, mono)
