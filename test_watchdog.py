@@ -8,10 +8,10 @@ import controller as c
 import terminate_trial as t
 import reconcile_resources as r
 KEY='TEST_CREDENTIAL_DO_NOT_LOG'
-def policy():return dict(approved=True,billing_mode='prepaid',auto_pay_disabled=True,risk_or_contract_approval=True,name='gpu-trial-000000000001',image='example.invalid/container@sha256:'+'0'*64,gpu_type='NVIDIA L40S',gpu_count=1,container_disk_gb=50,data_center_id='EU-TEST-1',quoted_hourly_usd=1.1,startup_sha256=c.startup_fingerprint(['/usr/bin/python3','-I','-B','-c'],['import time; time.sleep(6600)']))
+def policy():return dict(approved=True,billing_mode='prepaid',auto_pay_disabled=True,risk_or_contract_approval=True,name='gpu-trial-000000000001',image='example.invalid/container@sha256:'+'0'*64,gpu_type='NVIDIA L40S',gpu_count=1,container_disk_gb=50,data_center_ids=['EU-TEST-1'],quoted_hourly_usd=1.1,startup_sha256=c.startup_fingerprint(['/usr/bin/python3','-I','-B','-c'],['import time; time.sleep(6600)']))
 def lock(p):return {'sha256':hashlib.sha256(c.canonical(p)).hexdigest()}
 def pod():
- p=policy();return dict(id='pod_test123',name=p['name'],createdAt='2026-01-01T00:00:00Z',image=p['image'],cloud='SECURE',dataCenterId=p['data_center_id'],disk=50,ports=[],mounts={},gpu={'id':p['gpu_type'],'count':1},cost=1.1,globalNetworking={'enabled':False},entrypoint=['/usr/bin/python3','-I','-B','-c'],cmd=['import time; time.sleep(6600)'],runtime=None,args=json.dumps({'entrypoint':['/usr/bin/python3','-I','-B','-c'],'cmd':['import time; time.sleep(6600)']}))
+ p=policy();return dict(id='pod_test123',name=p['name'],createdAt='2026-01-01T00:00:00Z',image=p['image'],cloud='SECURE',dataCenterId=p['data_center_ids'][0],disk=50,ports=[],mounts={},gpu={'id':p['gpu_type'],'count':1},cost=1.1,globalNetworking={'enabled':False},entrypoint=['/usr/bin/python3','-I','-B','-c'],cmd=['import time; time.sleep(6600)'],runtime=None,args=json.dumps({'entrypoint':['/usr/bin/python3','-I','-B','-c'],'cmd':['import time; time.sleep(6600)']}))
 NOW=datetime.datetime(2026,1,1,tzinfo=datetime.timezone.utc).timestamp()
 class Clock:
  def __init__(self):self.v=NOW
@@ -33,7 +33,7 @@ class Tests(unittest.TestCase):
   p=policy();p['billing_mode']='postpaid'
   with self.assertRaises(t.Stop):c.load_policy(json.dumps(p),lock(p))
  def test_invalid_policy_fields(self):
-  for k,v in [('image','latest'),('gpu_count',2),('gpu_count',True),('container_disk_gb',51),('quoted_hourly_usd',float('inf')),('quoted_hourly_usd',True),('quoted_hourly_usd',3),('data_center_id',None),('name','bad name')]:
+  for k,v in [('image','latest'),('gpu_count',2),('gpu_count',True),('container_disk_gb',51),('quoted_hourly_usd',float('inf')),('quoted_hourly_usd',True),('quoted_hourly_usd',3),('data_center_ids',None),('name','bad name')]:
    p=policy();p[k]=v
    with self.subTest(k=k,v=repr(v)),self.assertRaises((t.Stop,ValueError)):c.load_policy(json.dumps(p),lock(p))
  def test_unknown_policy_field_rejected(self):
@@ -44,7 +44,7 @@ class Tests(unittest.TestCase):
  def test_nonfinite_json(self):
   with self.assertRaises(t.Stop):t.strict_json('{"a":NaN}')
  def test_individual_environment_policy(self):
-  p=policy();e={'POLICY_APPROVED':'true','POLICY_BILLING_MODE':'prepaid','POLICY_AUTO_PAY_DISABLED':'true','POLICY_RISK_ACCEPTED':'true','POLICY_NAME':p['name'],'POLICY_IMAGE':p['image'],'POLICY_DATA_CENTER':p['data_center_id'],'POLICY_GPU_TYPE':p['gpu_type'],'POLICY_MAX_HOURLY_USD':'1.1','POLICY_GPU_COUNT':'1','POLICY_CONTAINER_DISK_GB':'50','POLICY_STARTUP_SHA256':p['startup_sha256']}
+  p=policy();e={'POLICY_APPROVED':'true','POLICY_BILLING_MODE':'prepaid','POLICY_AUTO_PAY_DISABLED':'true','POLICY_RISK_ACCEPTED':'true','POLICY_NAME':p['name'],'POLICY_IMAGE':p['image'],'POLICY_DATA_CENTER':p['data_center_ids'][0],'POLICY_GPU_TYPE':p['gpu_type'],'POLICY_MAX_HOURLY_USD':'1.1','POLICY_GPU_COUNT':'1','POLICY_CONTAINER_DISK_GB':'50','POLICY_STARTUP_SHA256':p['startup_sha256']}
   self.assertEqual(p,c.policy_from_environment(e,lock(p)))
   e['POLICY_APPROVED']='yes'
   with self.assertRaises(t.Stop):c.policy_from_environment(e,lock(p))
@@ -77,7 +77,7 @@ class Tests(unittest.TestCase):
     key=dict(r.CATEGORIES.values())[path]
     if path=='/pods':phase['lists']+=1
     candidate=pod();candidate[field]=value
-    return 200,{key:[candidate]if path=='/pods'and phase['lists']==2 else [],'pagination':{'hasNextPage':False,'nextCursor':None}}
+    return 200,{key:[candidate]if path=='/pods'and phase['lists']>=2 and not phase.get('deleted',False) else [],'pagination':{'hasNextPage':False,'nextCursor':None}}
    with self.subTest(field=field),contextlib.redirect_stdout(io.StringIO()),self.assertRaises(t.Stop):c.watch(policy(),KEY,tx,clock.time,clock.mono,clock.sleep)
    self.assertFalse(any(method=='DELETE'for method,path in calls))
  def test_receipt_cannot_extend_deadline(self):
@@ -141,7 +141,7 @@ class Tests(unittest.TestCase):
    if path in dict(r.CATEGORIES.values()):
     key=dict(r.CATEGORIES.values())[path]
     if path=='/pods':pod_lists+=1
-    rows=[pod()]if path=='/pods'and pod_lists==2 else []
+    rows=[pod()]if path=='/pods'and pod_lists>=2 and not any(m=='DELETE'for m,_,_ in calls) else []
     return 200,{key:rows,'pagination':{'hasNextPage':False,'nextCursor':None}}
    if method=='DELETE':return 204,None
    if any(m=='DELETE'for m,_,_ in calls):return 404,None
@@ -156,7 +156,7 @@ class Tests(unittest.TestCase):
    if path in dict(r.CATEGORIES.values()):
     key=dict(r.CATEGORIES.values())[path]
     if path=='/pods':phase['lists']+=1
-    return 200,{key:[pod()]if path=='/pods'and phase['lists']==2 else [],'pagination':{'hasNextPage':False,'nextCursor':None}}
+    return 200,{key:[pod()]if path=='/pods'and phase['lists']>=2 and not phase.get('deleted',False) else [],'pagination':{'hasNextPage':False,'nextCursor':None}}
    if method=='DELETE':phase['deleted']=True;return 204,None
    if phase['deleted']:return 404,None
    raise t.Stop('API_UNAVAILABLE')
@@ -169,7 +169,7 @@ class Tests(unittest.TestCase):
    if path in dict(r.CATEGORIES.values()):
     key=dict(r.CATEGORIES.values())[path]
     if path=='/pods':phase['lists']+=1
-    return 200,{key:[pod()]if path=='/pods'and phase['lists']==2 else [],'pagination':{'hasNextPage':False,'nextCursor':None}}
+    return 200,{key:[pod()]if path=='/pods'and phase['lists']>=2 and not phase.get('deleted',False) else [],'pagination':{'hasNextPage':False,'nextCursor':None}}
    if method=='DELETE':phase['deleted']=True;return 204,None
    if phase['deleted']:return 404,None
    changed=pod();changed['ports']=['22/tcp'];return 200,changed
@@ -181,7 +181,7 @@ class Tests(unittest.TestCase):
    if path in dict(r.CATEGORIES.values()):
     key=dict(r.CATEGORIES.values())[path]
     if path=='/pods':phase['lists']+=1
-    return 200,{key:[pod()]if path=='/pods'and phase['lists']==2 else [],'pagination':{'hasNextPage':False,'nextCursor':None}}
+    return 200,{key:[pod()]if path=='/pods'and phase['lists']>=2 and not phase.get('deleted',False) else [],'pagination':{'hasNextPage':False,'nextCursor':None}}
    if method=='DELETE':phase['deleted']=True;return 204,None
    if phase['deleted']:return 404,None
    raise KeyboardInterrupt()
@@ -198,7 +198,7 @@ class Tests(unittest.TestCase):
    if path in dict(r.CATEGORIES.values()):
     key=dict(r.CATEGORIES.values())[path]
     if path=='/pods':phase['lists']+=1
-    return 200,{key:[pod()]if path=='/pods'and phase['lists']==2 else [],'pagination':{'hasNextPage':False,'nextCursor':None}}
+    return 200,{key:[pod()]if path=='/pods'and phase['lists']>=2 and not phase.get('deleted',False) else [],'pagination':{'hasNextPage':False,'nextCursor':None}}
    if method=='DELETE':phase['deleted']=True;return 204,None
    if phase['deleted']:return 404,None
    phase['skew']=-30;return 200,pod()
