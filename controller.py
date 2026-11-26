@@ -6,7 +6,7 @@ from terminate_trial import Stop,request,terminate,strict_json,ID
 from reconcile_resources import inventory,listing
 P=pathlib.Path(__file__).resolve().parent
 EXPIRY=105*60
-FIELDS={'approved','billing_mode','auto_pay_disabled','risk_or_contract_approval','name','image','gpu_type','gpu_count','container_disk_gb','data_center_id','quoted_hourly_usd','startup_sha256'}
+FIELDS={'approved','billing_mode','auto_pay_disabled','risk_or_contract_approval','name','image','gpu_type','gpu_count','container_disk_gb','data_center_ids','quoted_hourly_usd','startup_sha256'}
 EVENTS={'READY_EMPTY_ACCOUNT','NO_RESOURCE_CREATED','TARGET_BOUND','TARGET_ABSENT','RECONCILIATION','STOP','WATCHDOG_HEARTBEAT'}
 def emit(event,counts=None):
  if event not in EVENTS:raise Stop('LOG_POLICY')
@@ -41,6 +41,8 @@ def runtime_mapping_compatible(pod):
  if 'runtime'not in pod:return False
  runtime=pod['runtime']
  return runtime is None or(type(runtime)is dict and type(runtime.get('ports'))is list and runtime['ports']==[])
+def valid_centres(ids):
+ return (type(ids)is list and 1<=len(ids)<=16 and all(type(v)is str and re.fullmatch(r'(?:EU|EUR)-[A-Z0-9]+-[0-9]+',v)for v in ids)and ids==sorted(set(ids)))
 def load_policy(text,lock):
  if not isinstance(text,str)or len(text)>16384:raise Stop('POLICY_REQUIRED')
  p=strict_json(text)
@@ -53,7 +55,7 @@ def load_policy(text,lock):
  if not isinstance(p['image'],str)or not re.fullmatch(r'[A-Za-z0-9._:/-]+@sha256:[a-f0-9]{64}',p['image']):raise Stop('POLICY_SCHEMA')
  if not isinstance(p['gpu_type'],str)or not 1<=len(p['gpu_type'])<=80 or any(ord(c)<32 for c in p['gpu_type']):raise Stop('POLICY_SCHEMA')
  if type(p['gpu_count'])is not int or p['gpu_count']!=1 or type(p['container_disk_gb'])is not int or not 1<=p['container_disk_gb']<=50:raise Stop('POLICY_SCHEMA')
- if not isinstance(p['data_center_id'],str)or not re.fullmatch('[A-Z0-9-]{3,40}',p['data_center_id']):raise Stop('POLICY_SCHEMA')
+ if not valid_centres(p['data_center_ids']):raise Stop('POLICY_SCHEMA')
  if type(p['quoted_hourly_usd'])not in(int,float)or not math.isfinite(p['quoted_hourly_usd'])or not 0<p['quoted_hourly_usd']<=2:raise Stop('POLICY_SCHEMA')
  return p
 
@@ -68,7 +70,7 @@ def policy_from_environment(e,lock):
   return int(v)
  try:price=float(e.get('POLICY_MAX_HOURLY_USD',''))
  except Exception:raise Stop('POLICY_REQUIRED')from None
- p=dict(approved=boolean('POLICY_APPROVED'),billing_mode=e.get('POLICY_BILLING_MODE'),auto_pay_disabled=boolean('POLICY_AUTO_PAY_DISABLED'),risk_or_contract_approval=boolean('POLICY_RISK_ACCEPTED'),name=e.get('POLICY_NAME'),image=e.get('POLICY_IMAGE'),gpu_type=e.get('POLICY_GPU_TYPE'),gpu_count=integer('POLICY_GPU_COUNT'),container_disk_gb=integer('POLICY_CONTAINER_DISK_GB'),data_center_id=e.get('POLICY_DATA_CENTER'),quoted_hourly_usd=price,startup_sha256=e.get('POLICY_STARTUP_SHA256'))
+ p=dict(approved=boolean('POLICY_APPROVED'),billing_mode=e.get('POLICY_BILLING_MODE'),auto_pay_disabled=boolean('POLICY_AUTO_PAY_DISABLED'),risk_or_contract_approval=boolean('POLICY_RISK_ACCEPTED'),name=e.get('POLICY_NAME'),image=e.get('POLICY_IMAGE'),gpu_type=e.get('POLICY_GPU_TYPE'),gpu_count=integer('POLICY_GPU_COUNT'),container_disk_gb=integer('POLICY_CONTAINER_DISK_GB'),data_center_ids=e.get('POLICY_DATA_CENTER','').split(','),quoted_hourly_usd=price,startup_sha256=e.get('POLICY_STARTUP_SHA256'))
  try:text=json.dumps(p,allow_nan=False)
  except Exception:raise Stop('POLICY_REQUIRED')from None
  return load_policy(text,lock)
@@ -77,7 +79,7 @@ def bind(p,pod,now,earliest):
  if not isinstance(pod,dict)or pod.get('name')!=p['name']or not isinstance(pod.get('id'),str)or not ID.fullmatch(pod['id']):raise Stop('TARGET_AMBIGUOUS')
  created=creation_time(pod)
  if not earliest-5<=created<=now or now-created>7200:raise Stop('TARGET_CLOCK')
- candidate={'pod_id':pod['id'],'created_unix':created,'deadline_unix':created+EXPIRY,'network_volume_ids':[],'persistent_disk_gb':0}
+ candidate={'pod_id':pod['id'],'created_unix':created,'deadline_unix':created+EXPIRY,'network_volume_ids':[],'persistent_disk_gb':0,'data_center_id':pod.get('dataCenterId')}
  if not valid_target(p,pod,candidate):raise Stop('TARGET_NOT_AUTHORISED')
  # No deletion authority exists before the complete approved policy matches.
  return dict(candidate,approved=True),True
@@ -86,7 +88,7 @@ def valid_target(p,pod,r):
  gpu=pod.get('gpu');cost=pod.get('cost');mounts=pod.get('mounts');ports=pod.get('ports');network=pod.get('globalNetworking')
  try:same_creation=creation_time(pod)==r['created_unix']
  except (Stop,KeyError,TypeError):return False
- return (same_creation and startup_matches(p,pod)and runtime_mapping_compatible(pod)and pod.get('id')==r['pod_id']and pod.get('name')==p['name']and pod.get('image')==p['image']and pod.get('cloud')=='SECURE'and pod.get('dataCenterId')==p['data_center_id']and type(pod.get('disk'))is int and pod['disk']==p['container_disk_gb']and isinstance(ports,list)and ports==[]and isinstance(mounts,dict)and mounts=={}and isinstance(gpu,dict)and gpu.get('id')==p['gpu_type']and type(gpu.get('count'))is int and gpu['count']==1 and type(cost)in(int,float)and math.isfinite(cost)and 0<cost<=p['quoted_hourly_usd']+0.01 and isinstance(network,dict)and network.get('enabled')is False)
+ return (same_creation and startup_matches(p,pod)and runtime_mapping_compatible(pod)and pod.get('id')==r['pod_id']and pod.get('name')==p['name']and pod.get('image')==p['image']and pod.get('cloud')=='SECURE'and valid_centres(p['data_center_ids'])and pod.get('dataCenterId')in p['data_center_ids']and pod.get('dataCenterId')==r.get('data_center_id')and type(pod.get('disk'))is int and pod['disk']==p['container_disk_gb']and isinstance(ports,list)and ports==[]and isinstance(mounts,dict)and mounts=={}and isinstance(gpu,dict)and gpu.get('id')==p['gpu_type']and type(gpu.get('count'))is int and gpu['count']==1 and type(cost)in(int,float)and math.isfinite(cost)and 0<cost<=p['quoted_hourly_usd']+0.01 and isinstance(network,dict)and network.get('enabled')is False)
 
 def watch(p,token,transport=request,clock=time.time,mono=time.monotonic,sleep=time.sleep):
  counts=inventory(token,transport,mono)
@@ -108,6 +110,11 @@ def watch(p,token,transport=request,clock=time.time,mono=time.monotonic,sleep=ti
   if r is None:emit('NO_RESOURCE_CREATED');return
   while mono()<end and clock()<r['deadline_unix']:
    if abs((clock()-wall)-(mono()-start))>5:raise Stop('CLOCK_DRIFT')
+   remaining=min(end-mono(),r['deadline_unix']-clock())
+   if remaining<=0:break
+   # Reject a second Pod without ever granting it deletion authority.
+   current=listing('/pods','pods',token,transport,mono,min(end,mono()+30))
+   if len(current)!=1 or current[0].get('id')!=r['pod_id']:raise Stop('TARGET_AMBIGUOUS')
    remaining=min(end-mono(),r['deadline_unix']-clock())
    if remaining<=0:break
    status,pod=transport('GET','/pods/'+r['pod_id'],token,timeout=min(15,remaining))
