@@ -212,12 +212,12 @@ class Tests(unittest.TestCase):
   env={'CONTROLLER_REPOSITORY':'example/gpu-trial-watchdog','REVIEWED_CONTROLLER_COMMIT':'1'*40,'GITHUB_REPOSITORY':'example/gpu-trial-watchdog','GITHUB_SHA':'1'*40,'GITHUB_REF':'refs/heads/main','GITHUB_EVENT_NAME':'workflow_dispatch'}
   out=io.StringIO();err=io.StringIO()
   with patch.dict(os.environ,env,clear=True),patch.object(sys,'argv',['controller.py','watch']),patch.object(c,'policy_from_environment',side_effect=RuntimeError(KEY+' private-value')),contextlib.redirect_stdout(out),contextlib.redirect_stderr(err):result=c.main()
-  self.assertEqual(1,result);self.assertEqual('{"event": "STOP"}\n',out.getvalue());self.assertEqual('',err.getvalue())
+  self.assertEqual(1,result);self.assertEqual('{"event": "CONTROLLER_REJECT", "reason": "UNCLASSIFIED_FAILURE"}\n{"event": "STOP"}\n',out.getvalue());self.assertEqual('',err.getvalue())
  def test_actual_isolated_entrypoint_without_credentials(self):
   import subprocess
   root=pathlib.Path(__file__).resolve().parent
   result=subprocess.run([sys.executable,'-I','-B',str(root/'controller.py'),'inventory'],env={},capture_output=True,text=True,timeout=10)
-  self.assertEqual(1,result.returncode);self.assertEqual('{"event": "STOP"}\n',result.stdout);self.assertEqual('',result.stderr)
+  self.assertEqual(1,result.returncode);self.assertEqual('{"event": "CONTROLLER_REJECT", "reason": "WORKFLOW_CONTEXT"}\n{"event": "STOP"}\n',result.stdout);self.assertEqual('',result.stderr)
  def test_workflow_context(self):
   e={'CONTROLLER_REPOSITORY':'example/gpu-trial-watchdog','REVIEWED_CONTROLLER_COMMIT':'1'*40,'GITHUB_REPOSITORY':'example/gpu-trial-watchdog','GITHUB_SHA':'1'*40,'GITHUB_REF':'refs/heads/main','GITHUB_EVENT_NAME':'workflow_dispatch'}
   c.verify_context(e)

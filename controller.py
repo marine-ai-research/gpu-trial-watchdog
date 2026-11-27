@@ -4,6 +4,7 @@ sys.dont_write_bytecode=True
 sys.path.insert(0,str(pathlib.Path(__file__).resolve().parent))
 from terminate_trial import Stop,request,terminate,strict_json,ID
 from reconcile_resources import inventory,listing
+import binding_diagnostics as diagnostics
 P=pathlib.Path(__file__).resolve().parent
 EXPIRY=105*60
 FIELDS={'approved','billing_mode','auto_pay_disabled','risk_or_contract_approval','name','image','gpu_type','gpu_count','container_disk_gb','data_center_ids','quoted_hourly_usd','startup_sha256'}
@@ -75,7 +76,7 @@ def policy_from_environment(e,lock):
  except Exception:raise Stop('POLICY_REQUIRED')from None
  return load_policy(text,lock)
 
-def bind(p,pod,now,earliest):
+def _bind_v4(p,pod,now,earliest):
  if not isinstance(pod,dict)or pod.get('name')!=p['name']or not isinstance(pod.get('id'),str)or not ID.fullmatch(pod['id']):raise Stop('TARGET_AMBIGUOUS')
  created=creation_time(pod)
  if not earliest-5<=created<=now or now-created>7200:raise Stop('TARGET_CLOCK')
@@ -84,11 +85,23 @@ def bind(p,pod,now,earliest):
  # No deletion authority exists before the complete approved policy matches.
  return dict(candidate,approved=True),True
 
-def valid_target(p,pod,r):
+def _valid_target_v4(p,pod,r):
  gpu=pod.get('gpu');cost=pod.get('cost');mounts=pod.get('mounts');ports=pod.get('ports');network=pod.get('globalNetworking')
  try:same_creation=creation_time(pod)==r['created_unix']
  except (Stop,KeyError,TypeError):return False
  return (same_creation and startup_matches(p,pod)and runtime_mapping_compatible(pod)and pod.get('id')==r['pod_id']and pod.get('name')==p['name']and pod.get('image')==p['image']and pod.get('cloud')=='SECURE'and valid_centres(p['data_center_ids'])and pod.get('dataCenterId')in p['data_center_ids']and pod.get('dataCenterId')==r.get('data_center_id')and type(pod.get('disk'))is int and pod['disk']==p['container_disk_gb']and isinstance(ports,list)and ports==[]and isinstance(mounts,dict)and mounts=={}and isinstance(gpu,dict)and gpu.get('id')==p['gpu_type']and type(gpu.get('count'))is int and gpu['count']==1 and type(cost)in(int,float)and math.isfinite(cost)and 0<cost<=p['quoted_hourly_usd']+0.01 and isinstance(network,dict)and network.get('enabled')is False)
+
+def bind(p,pod,now,earliest):
+ try:return _bind_v4(p,pod,now,earliest)
+ except Stop as error:
+  if error.args in (('TARGET_AMBIGUOUS',),('TARGET_CLOCK',)):
+   diagnostics.report(sys.modules[__name__],p,pod,now=now,earliest=earliest)
+  raise
+
+def valid_target(p,pod,r):
+ accepted=_valid_target_v4(p,pod,r)
+ if not accepted:diagnostics.report(sys.modules[__name__],p,pod,r=r)
+ return accepted
 
 def watch(p,token,transport=request,clock=time.time,mono=time.monotonic,sleep=time.sleep):
  counts=inventory(token,transport,mono)
@@ -132,6 +145,11 @@ def verify_context(e):
  expected=e.get('CONTROLLER_REPOSITORY','');pin=e.get('REVIEWED_CONTROLLER_COMMIT','')
  if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+',expected)or not re.fullmatch('[a-f0-9]{40}',pin)or e.get('GITHUB_REPOSITORY')!=expected or e.get('GITHUB_SHA')!=pin or e.get('GITHUB_REF')!='refs/heads/main'or e.get('GITHUB_EVENT_NAME')!='workflow_dispatch':raise Stop('WORKFLOW_CONTEXT')
 
+SAFE_STOP_CODES=frozenset(('ACCOUNT_NOT_EMPTY', 'ACTION_NOT_ALLOWED', 'API_RESPONSE', 'API_UNAVAILABLE', 'APPROVAL_REQUIRED', 'ARM_WINDOW_EXPIRED', 'CLOCK_DRIFT', 'CREDENTIAL_REQUIRED', 'INTERRUPTED', 'INVALID_JSON', 'INVALID_RECEIPT', 'INVENTORY_CURSOR', 'INVENTORY_LIMIT', 'INVENTORY_POLICY', 'INVENTORY_SCHEMA', 'INVENTORY_TIMEOUT', 'LOG_POLICY', 'OTHER_RESOURCES_REMAIN', 'POLICY_LOCK', 'POLICY_REQUIRED', 'POLICY_SCHEMA', 'STARTUP_SCHEMA', 'TARGET_AMBIGUOUS', 'TARGET_CLOCK', 'TARGET_NOT_AUTHORISED', 'TARGET_POLICY_CHANGED', 'TERMINATION_UNCONFIRMED', 'TRANSPORT_POLICY', 'WORKFLOW_CONTEXT'))
+def safe_stop(error):
+ code=error.args[0] if type(error)is Stop and len(error.args)==1 and type(error.args[0])is str and error.args[0]in SAFE_STOP_CODES else 'UNCLASSIFIED_FAILURE'
+ print(json.dumps({'event':'CONTROLLER_REJECT','reason':code},sort_keys=True),flush=True)
+
 def main():
  try:
   if len(sys.argv)!=2 or sys.argv[1]not in('watch','inventory'):raise Stop('ACTION_NOT_ALLOWED')
@@ -146,7 +164,8 @@ def main():
    counts=inventory(token);emit('RECONCILIATION',counts)
    if any(counts.values()):raise Stop('OTHER_RESOURCES_REMAIN')
   return 0
- except BaseException:
-  # Do not print exception text, provider records, inputs, headers or tracebacks.
+ except BaseException as error:
+  # Fixed allowlisted codes only; never interpolate exception/provider text.
+  safe_stop(error)
   emit('STOP');return 1
 if __name__=='__main__':sys.exit(main())
