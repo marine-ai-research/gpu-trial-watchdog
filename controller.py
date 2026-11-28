@@ -2,9 +2,10 @@
 import datetime,hashlib,json,math,os,pathlib,re,signal,sys,time
 sys.dont_write_bytecode=True
 sys.path.insert(0,str(pathlib.Path(__file__).resolve().parent))
-from terminate_trial import Stop,request,terminate,strict_json,ID
+from terminate_trial import Stop,request,terminate as _terminate_v5,strict_json,ID
 from reconcile_resources import inventory,listing
 import binding_diagnostics as diagnostics
+import runtime_diagnostics as runtime_diag
 P=pathlib.Path(__file__).resolve().parent
 EXPIRY=105*60
 FIELDS={'approved','billing_mode','auto_pay_disabled','risk_or_contract_approval','name','image','gpu_type','gpu_count','container_disk_gb','data_center_ids','quoted_hourly_usd','startup_sha256'}
@@ -92,7 +93,10 @@ def _valid_target_v4(p,pod,r):
  return (same_creation and startup_matches(p,pod)and runtime_mapping_compatible(pod)and pod.get('id')==r['pod_id']and pod.get('name')==p['name']and pod.get('image')==p['image']and pod.get('cloud')=='SECURE'and valid_centres(p['data_center_ids'])and pod.get('dataCenterId')in p['data_center_ids']and pod.get('dataCenterId')==r.get('data_center_id')and type(pod.get('disk'))is int and pod['disk']==p['container_disk_gb']and isinstance(ports,list)and ports==[]and isinstance(mounts,dict)and mounts=={}and isinstance(gpu,dict)and gpu.get('id')==p['gpu_type']and type(gpu.get('count'))is int and gpu['count']==1 and type(cost)in(int,float)and math.isfinite(cost)and 0<cost<=p['quoted_hourly_usd']+0.01 and isinstance(network,dict)and network.get('enabled')is False)
 
 def bind(p,pod,now,earliest):
- try:return _bind_v4(p,pod,now,earliest)
+ try:
+  result=_bind_v4(p,pod,now,earliest)
+  runtime_diag.safe('observe',pod,'BOUND')
+  return result
  except Stop as error:
   if error.args in (('TARGET_AMBIGUOUS',),('TARGET_CLOCK',)):
    diagnostics.report(sys.modules[__name__],p,pod,now=now,earliest=earliest)
@@ -100,8 +104,19 @@ def bind(p,pod,now,earliest):
 
 def valid_target(p,pod,r):
  accepted=_valid_target_v4(p,pod,r)
+ runtime_diag.safe('observe',pod,'VALIDATED'if accepted else'REJECTED')
  if not accepted:diagnostics.report(sys.modules[__name__],p,pod,r=r)
  return accepted
+
+def terminate(r,token,transport=request,clock=time.time,sleep=time.sleep,mono=time.monotonic):
+ # Same v5 receipt authority/retries/timeouts. Buffer diagnostics until cleanup ends.
+ def observed(method,path,key,timeout=15):
+  if method=='DELETE':runtime_diag.safe('delete','DISPATCH_ATTEMPT')
+  result=transport(method,path,key,timeout=timeout)
+  if method=='DELETE':runtime_diag.safe('delete','HTTP_RESPONSE',result[0])
+  return result
+ try:return _terminate_v5(r,token,observed,clock,sleep,mono)
+ finally:runtime_diag.safe('flush')
 
 def watch(p,token,transport=request,clock=time.time,mono=time.monotonic,sleep=time.sleep):
  counts=inventory(token,transport,mono)
